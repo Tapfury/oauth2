@@ -12,7 +12,8 @@ import (
 	"gopkg.in/oauth2.v3/errors"
 )
 
-// RPCTokenReq interface holds rpc req
+// RPCTokenReq interface wraps rpc request
+// by using the rpc request appropriate field getter
 type RPCTokenReq interface {
 	GetUsername() string
 	GetPassword() string
@@ -20,9 +21,11 @@ type RPCTokenReq interface {
 	GetClientId() string
 	GetClientSecret() string
 	GetScope() string
+	GetRefreshToken() string
 }
 
-// RPCValidateAccessTokenReq interface holds  rpc validatation req
+// RPCValidateAccessTokenReq interface wraps rpc req
+// by using the rpc request appropriate field getter
 type RPCValidateAccessTokenReq interface {
 	GetAccessToken() string
 }
@@ -424,12 +427,12 @@ func (s *Server) ValidationTokenRequestRPC(r RPCTokenReq) (gt oauth2.GrantType, 
 	case oauth2.ClientCredentials:
 		tgr.Scope = r.GetScope()
 	case oauth2.Refreshing:
-		// tgr.Refresh = r.FormValue("refresh_token")
-		// tgr.Scope = r.FormValue("scope")
+		tgr.Refresh = r.GetRefreshToken()
+		tgr.Scope = r.GetScope()
 
-		// if tgr.Refresh == "" {
-		// 	err = errors.ErrInvalidRequest
-		// }
+		if tgr.Refresh == "" {
+			err = errors.ErrInvalidRequest
+		}
 	}
 	return
 }
@@ -575,7 +578,7 @@ func (s *Server) HandleTokenRequest(w http.ResponseWriter, r *http.Request) (err
 	return
 }
 
-// HandleTokenRequestRPC handle grpc token request
+// HandleTokenRequestRPC handle rpc token request
 func (s *Server) HandleTokenRequestRPC(r RPCTokenReq) (ti oauth2.TokenInfo, err error) {
 	gt, tgr, verr := s.ValidationTokenRequestRPC(r)
 	if verr != nil {
@@ -680,7 +683,7 @@ func (s *Server) ValidationBearerToken(r *http.Request) (ti oauth2.TokenInfo, er
 	return
 }
 
-// ValidationRPCBearerToken validates the bearer tokens
+// ValidationRPCBearerToken validates the bearer tokens for rpc req
 // https://tools.ietf.org/html/rfc6750
 func (s *Server) ValidationRPCBearerToken(r RPCValidateAccessTokenReq) (ti oauth2.TokenInfo, err error) {
 	accessToken := r.GetAccessToken()
