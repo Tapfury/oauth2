@@ -22,6 +22,11 @@ type RPCTokenReq interface {
 	GetScope() string
 }
 
+// RPCValidateAccessTokenReq interface holds  rpc validatation req
+type RPCValidateAccessTokenReq interface {
+	GetAccessToken() string
+}
+
 // NewDefaultServer create a default authorization server
 func NewDefaultServer(manager oauth2.Manager) *Server {
 	return NewServer(NewConfig(), manager)
@@ -666,6 +671,20 @@ func (s *Server) BearerAuth(r *http.Request) (accessToken string, ok bool) {
 func (s *Server) ValidationBearerToken(r *http.Request) (ti oauth2.TokenInfo, err error) {
 	accessToken, ok := s.BearerAuth(r)
 	if !ok {
+		err = errors.ErrInvalidAccessToken
+		return
+	}
+
+	ti, err = s.Manager.LoadAccessToken(accessToken)
+
+	return
+}
+
+// ValidationRPCBearerToken validates the bearer tokens
+// https://tools.ietf.org/html/rfc6750
+func (s *Server) ValidationRPCBearerToken(r RPCValidateAccessTokenReq) (ti oauth2.TokenInfo, err error) {
+	accessToken := r.GetAccessToken()
+	if accessToken == "" {
 		err = errors.ErrInvalidAccessToken
 		return
 	}
