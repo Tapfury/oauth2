@@ -669,6 +669,22 @@ func (s *Server) BearerAuth(r *http.Request) (accessToken string, ok bool) {
 	return
 }
 
+// BearerAuthRPC parse bearer token from rpc
+func (s *Server) BearerAuthRPC(r RPCValidateAccessTokenReq) (accessToken string, ok bool) {
+	auth := r.GetAccessToken()
+	prefix := "Bearer "
+
+	if auth != "" && strings.HasPrefix(auth, prefix) {
+		accessToken = auth[len(prefix):]
+	}
+
+	if accessToken != "" {
+		ok = true
+	}
+
+	return
+}
+
 // ValidationBearerToken validation the bearer tokens
 // https://tools.ietf.org/html/rfc6750
 func (s *Server) ValidationBearerToken(r *http.Request) (ti oauth2.TokenInfo, err error) {
@@ -686,8 +702,8 @@ func (s *Server) ValidationBearerToken(r *http.Request) (ti oauth2.TokenInfo, er
 // ValidationRPCBearerToken validates the bearer tokens for rpc req
 // https://tools.ietf.org/html/rfc6750
 func (s *Server) ValidationRPCBearerToken(r RPCValidateAccessTokenReq) (ti oauth2.TokenInfo, err error) {
-	accessToken := r.GetAccessToken()
-	if accessToken == "" {
+	accessToken, ok := s.BearerAuthRPC(r)
+	if !ok {
 		err = errors.ErrInvalidAccessToken
 		return
 	}
